@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Xarlie's Golf Club</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div id="userWidget" class="hidden">👤 <span id="widgetName">Anónimo</span></div>
+
+    <div id="loginScreen" class="screen">
+        <div class="golf-badge">⛳</div>
+        <h1 class="title-golf">XARLIE'S<br>GOLF CLUB</h1>
+        
+        <div class="card glass-card">
+            <p style="color:var(--text-dark); font-weight:bold; margin-bottom:10px;">Identifícate en el Club</p>
+            <input type="text" id="inp-username" placeholder="Tu nombre..." autocomplete="off" onkeydown="if(event.key === 'Enter') app.login()">
+            
+            <div style="text-align: right; margin-top:-10px; margin-bottom:15px;">
+                <span onclick="app.showRegister()" style="color:var(--sand); font-size:0.8em; font-weight:bold; cursor:pointer; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">📝 Crear Clave</span>
+            </div>
+
+            <button class="btn-main" onclick="app.login()">ENTRAR AL CAMPO</button>
+        </div>
+    </div>
+
+    <div id="hubScreen" class="screen hidden">
+        <h2 class="title-golf" style="font-size:2.2em; margin-bottom: 25px;">Club House</h2>
+        
+        <button class="btn-pill mb-20" onclick="app.showAddRecordModal()">➕ AÑADIR REGISTRO</button>
+
+        <div class="hub-grid">
+            <button class="btn-circle" onclick="app.showList('players')">
+                <span class="icon">👤</span><span class="lbl">Jugadores</span>
+            </button>
+            <button class="btn-circle" onclick="app.showList('courses')">
+                <span class="icon">🗺️</span><span class="lbl">Campos</span>
+            </button>
+            <button class="btn-circle" onclick="app.showList('tracks')">
+                <span class="icon">⛳</span><span class="lbl">Pistas</span>
+            </button>
+            <button class="btn-circle" onclick="app.showList('top')">
+                <span class="icon">🏆</span><span class="lbl">Mejores</span>
+            </button>
+            <button class="btn-circle" onclick="app.showList('streaks')">
+                <span class="icon">🔥</span><span class="lbl">Rachas</span>
+            </button>
+            <button class="btn-circle" onclick="app.showList('feedback')">
+                <span class="icon">💬</span><span class="lbl">Feedback</span>
+            </button>
+        </div>
+        
+        <button class="btn-pill mt-20" style="background:linear-gradient(135deg, #ffffff, #e0e5ec); color:var(--dark-green);" onclick="app.showList('records')">📋 ÚLTIMOS REGISTROS</button>
+        <button class="btn-pill mt-20" style="background:linear-gradient(135deg, #ff4757, #c0392b); color:var(--white); border-color:#ff4757;" onclick="app.logout()">❌ SALIR</button>
+    </div>
+
+    <div id="listScreen" class="screen hidden">
+        <div class="header-nav">
+            <button class="btn-back" onclick="app.showScreen('hubScreen')">⬅ Volver</button>
+        </div>
+        <h2 id="listTitle" class="title-golf" style="font-size:1.8em;">...</h2>
+        
+        <div id="listAddArea" class="add-area card glass-card hidden">
+            <input type="text" id="inp-basicAdd" placeholder="Añadir nuevo..." onkeydown="if(event.key === 'Enter') app.addBasic()">
+            <button class="btn-main" onclick="app.addBasic()">AÑADIR</button>
+        </div>
+
+        <div id="listContainer" class="list-container"></div>
+    </div>
+
+    <div id="recordModal" class="modal hidden">
+        <div class="card modal-content" style="border: 4px solid var(--sand); background: var(--bg-light);">
+            <h2 class="title-golf" style="color:var(--dark-green); font-size:1.6em; margin-top:0; text-shadow:none;">Nuevo Hoyo</h2>
+            
+            <label class="input-label">Jugador *</label>
+            <select id="rec-player"></select>
+
+            <label class="input-label">Pista / Hoyo *</label>
+            <select id="rec-track"></select>
+
+            <div class="row-2">
+                <div>
+                    <label class="input-label">Golpes *</label>
+                    <input type="number" id="rec-strokes" value="4">
+                </div>
+                <div>
+                    <label class="input-label">Palo *</label>
+                    <input type="text" id="rec-club" placeholder="Ej: Hierro 7">
+                </div>
+            </div>
+
+            <hr style="border-top:2px dashed #a3b8ad; margin:15px 0;">
+            <p style="font-size:0.8em; color:var(--dark-green); font-weight:bold; margin-top:-5px; text-transform:uppercase;">Opcional</p>
+
+            <label class="input-label">Campo de Juego</label>
+            <select id="rec-course"><option value="">-- Ninguno --</option></select>
+
+            <div class="row-2">
+                <div>
+                    <label class="input-label">Par</label>
+                    <input type="number" id="rec-par" placeholder="Ej: 4">
+                </div>
+                <div>
+                    <label class="input-label">Tiempo</label>
+                    <select id="rec-weather">
+                        <option value="">-- Elige --</option>
+                        <option value="Perfecto">☀️ Perfecto</option>
+                        <option value="Favorable">🌤️ Favorable</option>
+                        <option value="Normal">☁️ Normal</option>
+                        <option value="Malo">🌧️ Malo</option>
+                        <option value="Horrible">⛈️ Horrible</option>
+                    </select>
+                </div>
+            </div>
+
+            <label class="input-label" style="margin-top:10px;">📸 Adjuntar Foto (Opcional)</label>
+            <input type="file" id="rec-photo" accept="image/*" style="font-size: 0.8em; padding: 8px;">
+
+            <div class="row-2" style="margin-top:15px;">
+                <button class="btn-main" style="background:#576574;" onclick="document.getElementById('recordModal').classList.add('hidden')">Cancelar</button>
+                <button class="btn-main" style="background:var(--sand); color:var(--dark-green);" onclick="app.submitRecord()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="photoModal" class="modal hidden" onclick="this.classList.add('hidden')">
+        <img id="expandedPhoto" src="" style="max-width:90%; max-height:80vh; border-radius:10px; border: 4px solid var(--sand); box-shadow:0 10px 30px rgba(0,0,0,0.8);">
+        <p style="color:white; margin-top:15px; font-weight:bold; text-shadow:1px 1px 5px black;">Toca para cerrar</p>
+    </div>
+
+    <div id="passwordModal" class="modal hidden">
+        <div class="card modal-content glass-card text-center">
+            <h2 style="color:var(--dark-green); text-shadow:none;">🔒 Clave</h2>
+            <p style="font-size:0.9em; color:var(--text-dark);">Este usuario está protegido.</p>
+            <input type="password" id="inp-password" placeholder="***" onkeydown="if(event.key === 'Enter') app.submitPassword()">
+            <div class="row-2 mt-20">
+                <button class="btn-main" style="background:var(--red);" onclick="document.getElementById('passwordModal').classList.add('hidden')">Atrás</button>
+                <button class="btn-main" onclick="app.submitPassword()">Entrar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="registerModal" class="modal hidden">
+        <div class="card modal-content glass-card text-center">
+            <h2 style="color:var(--dark-green); text-shadow:none;">📝 Registrar</h2>
+            <input type="text" id="reg-user" placeholder="Usuario" readonly style="background:#eee; color:#666;">
+            <input type="password" id="reg-pass" placeholder="Contraseña" onkeydown="if(event.key === 'Enter') app.submitRegister()">
+            <div class="row-2 mt-20">
+                <button class="btn-main" style="background:#576574;" onclick="document.getElementById('registerModal').classList.add('hidden')">Atrás</button>
+                <button class="btn-main" onclick="app.submitRegister()">Registrar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
