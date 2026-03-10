@@ -28,7 +28,7 @@
     </div>
 
     <div id="hubScreen" class="screen hidden">
-        <h2 class="title-golf" style="font-size:2.2em; margin-bottom: 25px;">Golf Club Registers</h2>
+        <h2 class="title-golf" style="font-size:2.2em; margin-bottom: 25px;">Club House</h2>
         
         <button class="btn-pill mb-20" onclick="app.showAddRecordModal()">➕ AÑADIR REGISTRO</button>
 
@@ -55,6 +55,15 @@
         
         <button class="btn-pill mt-20" style="background:linear-gradient(135deg, #ffffff, #e0e5ec); color:var(--dark-green);" onclick="app.showList('records')">📋 ÚLTIMOS REGISTROS</button>
         <button class="btn-pill mt-20" style="background:linear-gradient(135deg, #ff4757, #c0392b); color:var(--white); border-color:#ff4757;" onclick="app.logout()">❌ SALIR</button>
+
+        <div style="margin-top: 40px; text-align: center; color: var(--white); opacity: 0.9;">
+            <a href="https://github.com/carlosalarcongu/xarliesgolf.git" target="_blank" style="font-size: 0.85em; text-decoration: none; color: inherit; font-weight: bold; background: rgba(0,0,0,0.3); padding: 5px 15px; border-radius: 15px;">
+                🏌️‍♂️ Ver el proyecto en GitHub 🏌️‍♂️
+            </a>
+        </div>
+        <div style="text-align:center; margin-top:15px; margin-bottom:20px;">
+            <a href="javascript:void(0)" onclick="app.showLegalModal()" style="color:var(--sand); font-size:0.75em; text-decoration:underline;">Política de Privacidad y Términos de Uso</a>
+        </div>
     </div>
 
     <div id="listScreen" class="screen hidden">
@@ -155,7 +164,33 @@
         </div>
     </div>
 
+    <div id="legalBanner" class="hidden" style="position:fixed; bottom:0; left:0; width:100%; background:var(--dark-green); color:var(--white); padding:15px; text-align:center; box-shadow:0 -2px 10px rgba(0,0,0,0.5); z-index:9999; font-size:0.85em; border-top: 3px solid var(--sand);">
+        <p style="margin:0 0 10px 0; line-height: 1.4;">
+            ⚠️ Usamos almacenamiento local para mantener tu sesión activa y registramos tus jugadas. <br>
+            Al continuar, confirmas que aceptas nuestra <a href="javascript:void(0)" onclick="app.showLegalModal()" style="color:var(--sand); text-decoration:underline; font-weight:bold;">Política de Privacidad y Uso</a>.
+        </p>
+        <button onclick="app.acceptLegal()" style="background:var(--sand); color:var(--dark-green); border:none; padding:8px 25px; border-radius:20px; font-weight:900; cursor:pointer;">Entendido y Acepto</button>
+    </div>
+
+    <div id="legalModal" class="modal hidden" style="z-index:10000;">
+        <div class="card modal-content" style="background:var(--bg-light); color:var(--text-dark); position:relative; text-align: left;">
+            <button onclick="app.closeLegalModal()" style="position:absolute; top:10px; right:15px; background:none; border:none; color:var(--red); font-size:1.5em; cursor:pointer; width:auto; box-shadow:none; padding:0;">✖</button>
+            
+            <h2 style="color:var(--dark-green); margin-top:0; border-bottom:2px solid var(--sand); padding-bottom:10px; font-family:'Playfair Display', serif;">📜 Textos Legales</h2>
+            
+            <h3 style="color:var(--green-mid); font-size:1em; margin-top:15px;">Aviso Legal</h3>
+            <p style="font-size:0.85em; color:#555;">Este sitio web es un proyecto personal de código abierto diseñado para el seguimiento de puntuaciones de Golf. No se realizan transacciones económicas ni uso comercial.</p>
+            
+            <h3 style="color:var(--green-mid); font-size:1em; margin-top:15px;">Política de Privacidad y Cookies</h3>
+            <p style="font-size:0.85em; color:#555;">
+                <strong>1. Datos recopilados:</strong> Al registrarte, el sistema guarda tu nombre y estadísticas de juego de manera indefinida. También guardamos una clave en tu dispositivo mediante <i>localStorage</i> para recordarte al volver a entrar.<br><br>
+                <strong>2. Cookies técnicas:</strong> El almacenamiento local (localStorage) es estrictamente necesario para que no tengas que iniciar sesión cada vez que recargas la página.<br><br>
+                <strong>3. Derechos:</strong> Puedes solicitar a un administrador la eliminación total de tus registros en cualquier momento.
+            </p>
+        </div>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
-    <script src="js/main.js?v=2"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>

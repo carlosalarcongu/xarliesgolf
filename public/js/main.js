@@ -1,4 +1,10 @@
+console.log("🟢 [CLIENTE] Archivo main.js cargado e inicializado.");
+
 const socket = io();
+
+socket.on('connect', () => {
+    console.log(`🟢 [CLIENTE] Socket conectado al servidor! ID: ${socket.id}`);
+});
 
 const app = {
     myPlayerName: null,
@@ -9,24 +15,36 @@ const app = {
     currentPhotoBase64: null, 
 
     init: () => {
+        console.log("🟢 [CLIENTE] Ejecutando app.init()...");
+        
+        // Comprobar si se han aceptado los términos legales (Cookies)
+        if (!localStorage.getItem('golf_legal_accepted')) {
+            const banner = document.getElementById('legalBanner');
+            if (banner) banner.classList.remove('hidden');
+        }
+
         const saved = localStorage.getItem('golf_user');
         if (saved) {
+            console.log(`🟢 [CLIENTE] Usuario previo encontrado: ${saved}`);
             app.myPlayerName = saved;
             app.isAuthenticated = true; 
             socket.emit('golf_requestData');
             app.showScreen('hubScreen');
         } else {
+            console.log("🟢 [CLIENTE] No hay usuario. Mostrando Login.");
             app.showScreen('loginScreen');
             document.getElementById('inp-username').focus();
         }
 
         socket.on('golf_data', (d) => {
+            console.log("🟢 [CLIENTE] RECIBIDO 'golf_data' desde el servidor.", d);
             app.data = d;
             if (app.currentListType) app.renderList(app.currentListType);
             app.populateSelects();
         });
 
         socket.on('golf_error', (msg) => {
+            console.log("🔴 [CLIENTE] RECIBIDO ERROR DEL SERVIDOR:", msg);
             alert("⚠️ Error del sistema: " + msg);
         });
 
@@ -35,6 +53,7 @@ const app = {
     },
 
     showScreen: (id) => {
+        console.log(`🟢 [CLIENTE] Cambiando a pantalla: ${id}`);
         document.querySelectorAll('.screen').forEach(el => el.classList.add('hidden'));
         document.getElementById(id).classList.remove('hidden');
 
@@ -51,9 +70,11 @@ const app = {
 
     login: () => {
         const name = document.getElementById('inp-username').value.trim();
+        console.log(`🟢 [CLIENTE] Intento de login con nombre: "${name}"`);
         if (!name) return alert("Introduce tu nombre");
 
         socket.emit('checkAuthRequirement', name, (res) => {
+            console.log(`🟢 [CLIENTE] Respuesta checkAuthRequirement:`, res);
             const finalize = () => {
                 app.myPlayerName = name;
                 localStorage.setItem('golf_user', name);
@@ -71,6 +92,7 @@ const app = {
     },
 
     logout: () => {
+        console.log("🟢 [CLIENTE] Cerrando sesión...");
         localStorage.removeItem('golf_user');
         app.myPlayerName = null;
         app.isAuthenticated = false;
@@ -118,6 +140,7 @@ const app = {
     },
 
     showList: (type) => {
+        console.log(`🟢 [CLIENTE] Abriendo lista de tipo: ${type}`);
         app.currentListType = type;
         app.showScreen('listScreen');
         
@@ -141,6 +164,7 @@ const app = {
 
     addBasic: () => {
         const val = document.getElementById('inp-basicAdd').value.trim();
+        console.log(`🟢 [CLIENTE] addBasic llamado. Contenido a enviar: "${val}"`);
         if(!val) return;
         
         let targetType = 'player';
@@ -148,23 +172,30 @@ const app = {
         if(app.currentListType === 'tracks') targetType = 'track';
         if(app.currentListType === 'feedback') targetType = 'feedback';
 
+        console.log(`🟡 [CLIENTE] EMITIENDO socket 'golf_addBasic'. Payload:`, { type: targetType, value: val, user: app.myPlayerName });
         socket.emit('golf_addBasic', { type: targetType, value: val, user: app.myPlayerName });
         document.getElementById('inp-basicAdd').value = "";
     },
 
     delBasic: (type, val) => {
+        console.log(`🟢 [CLIENTE] Botón Borrar pulsado. Elemento: [${type}] ${val}`);
         if(confirm(`¿Borrar este elemento?`)) {
+            console.log(`🟡 [CLIENTE] Confirmado. EMITIENDO 'golf_delBasic'`);
             socket.emit('golf_delBasic', { type, value: val });
         }
     },
 
     delRecord: (id) => {
+        console.log(`🟢 [CLIENTE] Botón Borrar Registro pulsado. ID: ${id}`);
         if(confirm("¿Eliminar este registro definitivamente?")) {
-            socket.emit('golf_delRecord', { id, reqUser: app.myPlayerName });
+            const payload = { id: id, reqUser: app.myPlayerName };
+            console.log(`🟡 [CLIENTE] Confirmado. EMITIENDO 'golf_delRecord':`, payload);
+            socket.emit('golf_delRecord', payload);
         }
     },
 
     renderList: (type) => {
+        console.log(`🟢 [CLIENTE] Renderizando vista de lista: ${type}`);
         const c = document.getElementById('listContainer');
         c.innerHTML = "";
         const isAdmin = ['xarlie', 'administrador g'].includes((app.myPlayerName||'').toLowerCase());
@@ -174,6 +205,7 @@ const app = {
             if(items.length === 0) c.innerHTML = "<p style='color:white; text-align:center;'>Vacío</p>";
             items.forEach(val => {
                 const typeMap = { players: 'player', courses: 'course', tracks: 'track' };
+                // NOTA: Para el feedback pasamos un número de ID, pero aquí pasamos el string 'val' escapado.
                 let delBtn = isAdmin ? `<button class="btn-del" onclick="app.delBasic('${typeMap[type]}', '${val.replace(/'/g, "\\'")}')">🗑️</button>` : '';
                 c.innerHTML += `<div class="list-item"><strong>${val}</strong> ${delBtn}</div>`;
             });
@@ -284,6 +316,7 @@ const app = {
     },
 
     handlePhotoUpload: (event) => {
+        console.log("🟢 [CLIENTE] Archivo de foto seleccionado.");
         const file = event.target.files[0];
         if(!file) {
             app.currentPhotoBase64 = null;
@@ -303,6 +336,7 @@ const app = {
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                 app.currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.6); 
+                console.log("🟢 [CLIENTE] Foto procesada y comprimida. Lista para enviar.");
             }
             img.src = e.target.result;
         }
@@ -310,6 +344,7 @@ const app = {
     },
 
     viewPhoto: (id) => {
+        console.log(`🟢 [CLIENTE] Abriendo visor de fotos para ID: ${id}`);
         const record = app.data.records.find(r => r.id == id);
         if (record && record.photo) {
             document.getElementById('expandedPhoto').src = record.photo;
@@ -318,6 +353,7 @@ const app = {
     },
 
     showAddRecordModal: () => {
+        console.log("🟢 [CLIENTE] Abriendo modal de nuevo registro.");
         app.populateSelects();
         document.getElementById('rec-photo').value = ""; 
         app.currentPhotoBase64 = null;
@@ -349,7 +385,6 @@ const app = {
         }
     },
 
-    // LA VERSIÓN FINAL Y LIMPIA DEL GUARDADO
     submitRecord: () => {
         const player = document.getElementById('rec-player').value;
         const track = document.getElementById('rec-track').value;
@@ -365,7 +400,6 @@ const app = {
             return alert("⚠️ FALTAN DATOS:\n\n- " + errores.join("\n- "));
         }
 
-        // Construir paquete filtrando vacíos para que la BBDD decida qué columnas crear
         const payload = {
             player: player,
             track: track,
@@ -388,11 +422,24 @@ const app = {
         socket.emit('golf_addRecord', payload);
         document.getElementById('recordModal').classList.add('hidden');
         
-        // Limpiamos
         document.getElementById('rec-strokes').value = "4";
         document.getElementById('rec-club').value = "";
         document.getElementById('rec-photo').value = "";
         app.currentPhotoBase64 = null;
+    },
+
+    // NUEVAS FUNCIONES LEGALES
+    showLegalModal: () => {
+        document.getElementById('legalModal').classList.remove('hidden');
+    },
+
+    closeLegalModal: () => {
+        document.getElementById('legalModal').classList.add('hidden');
+    },
+
+    acceptLegal: () => {
+        localStorage.setItem('golf_legal_accepted', 'true');
+        document.getElementById('legalBanner').classList.add('hidden');
     }
 };
 
