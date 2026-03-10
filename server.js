@@ -14,8 +14,8 @@ const io = new Server(server);
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Base de datos compartida
-console.log("🔵 [SERVER] Conectando a la base de datos SQLite...");
-const db = new Database(path.join(__dirname, 'golf_data.db'));
+console.log("🔵 [SERVER] Conectando a la base de datos SQLite (golf_users.db)...");
+const db = new Database(path.join(__dirname, 'golf_users.db'));
 db.prepare('CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT, email TEXT)').run();
 console.log("🔵 [SERVER] Tabla 'users' verificada.");
 
@@ -77,6 +77,7 @@ io.on('connection', (socket) => {
             const lowerName = data.username.toLowerCase();
             db.prepare('INSERT OR REPLACE INTO users (username, password, email) VALUES (?, ?, ?)').run(lowerName, data.password, data.email || '');
             if (callback) callback({ success: true });
+            console.log(`🔵 [SERVER] Usuario registrado con éxito.`);
         } catch(err) {
             console.error(`🔴 [SERVER] Error al registrar usuario:`, err);
         }

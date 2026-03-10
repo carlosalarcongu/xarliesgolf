@@ -149,3 +149,28 @@ input:focus, select:focus { border-color: var(--sand); outline: none; box-shadow
 .r-under { color: #27ae60; border-color: #27ae60; background: #e9f7ef; } 
 .r-over { color: #c0392b; border-color: #c0392b; background: #fadbd8; } 
 .r-par { color: #f39c12; border-color: #f39c12; background: #fef5e7; }
+
+/* =========================================
+   FONDO DINÁMICO DE GOLF
+   ========================================= */
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Ruta a la imagen (sube un nivel porque estamos dentro de la carpeta css) */
+    background-image: url('../golf.png'); 
+    background-size: cover;
+    background-repeat: no-repeat;
+    opacity: 0.45; /* Lo hacemos sutil (15%) para que se fusione con el degradado verde */
+    z-index: -1; /* Lo mandamos al fondo del todo */
+    animation: panGolfBg 60s ease-in-out infinite alternate;
+}
+
+/* Animación: Mueve la imagen de izquierda a derecha suavemente */
+@keyframes panGolfBg {
+    0% { background-position: 0% 50%; transform: scale(1.05); }
+    100% { background-position: 100% 50%; transform: scale(1.05); }
+}

@@ -1,25 +1,36 @@
 let dbInstance;
 
+// Función Mágica: Comprueba si una columna existe. Si no existe, la crea al instante.
+function ensureColumn(tableName, columnName, type = 'TEXT') {
+    try {
+        const columns = dbInstance.prepare(`PRAGMA table_info(${tableName})`).all();
+        if (!columns.find(c => c.name === columnName)) {
+            console.log(`🔵 [GOLF-DB] 🛠️ AUTO-ESCALADO: Añadiendo nueva columna '${columnName}' a la tabla '${tableName}'`);
+            dbInstance.prepare(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${type}`).run();
+        }
+    } catch (e) {
+        console.error(`🔴 [GOLF-DB] Error verificando columna ${columnName}:`, e);
+    }
+}
+
 module.exports = {
     init: (db) => {
-        console.log("🔵 [GOLF-DB] Inicializando tablas de Golf...");
         dbInstance = db;
+        console.log("🔵 [GOLF-DB] Inicializando base de datos ULTRA-ESCALABLE...");
         try {
             dbInstance.prepare('CREATE TABLE IF NOT EXISTS golf_players (name TEXT PRIMARY KEY)').run();
             dbInstance.prepare('CREATE TABLE IF NOT EXISTS golf_courses (name TEXT PRIMARY KEY)').run();
             dbInstance.prepare('CREATE TABLE IF NOT EXISTS golf_tracks (name TEXT PRIMARY KEY)').run();
             dbInstance.prepare('CREATE TABLE IF NOT EXISTS golf_feedback (id INTEGER PRIMARY KEY AUTOINCREMENT, user TEXT, date TEXT, content TEXT)').run();
+            
+            // Creamos la tabla solo con el ID. El resto se inyectará dinámicamente si no existe.
             dbInstance.prepare(`
                 CREATE TABLE IF NOT EXISTS golf_records (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    player TEXT, track TEXT, strokes INTEGER, club TEXT,
-                    course TEXT, par INTEGER, weather TEXT,
-                    date TEXT, addedBy TEXT, photo TEXT
+                    id INTEGER PRIMARY KEY AUTOINCREMENT
                 )
             `).run();
 
-            try { dbInstance.prepare('ALTER TABLE golf_records ADD COLUMN photo TEXT').run(); } catch(e) {}
-            console.log("🔵 [GOLF-DB] Tablas inicializadas correctamente. ✅");
+            console.log("✅ [GOLF-DB] Tablas base inicializadas.");
         } catch (err) {
             console.error("🔴 [GOLF-DB] ERROR FATAL al crear tablas:", err);
         }
@@ -27,8 +38,10 @@ module.exports = {
 
     handleSocket: (io, socket) => {
         const sendData = () => {
-            console.log("🔵 [GOLF-IO] Enviando paquete de datos completo a los clientes...");
             try {
+                // Aseguramos que estas columnas existan para evitar errores al leer
+                ['player', 'track', 'strokes', 'club', 'course', 'par', 'weather', 'date', 'addedBy', 'photo'].forEach(col => ensureColumn('golf_records', col));
+
                 const data = {
                     players: dbInstance.prepare('SELECT * FROM golf_players').all().map(p => p.name),
                     courses: dbInstance.prepare('SELECT * FROM golf_courses').all().map(c => c.name),
@@ -37,94 +50,106 @@ module.exports = {
                     feedback: dbInstance.prepare('SELECT * FROM golf_feedback ORDER BY id DESC').all()
                 };
                 io.emit('golf_data', data);
-                console.log("🔵 [GOLF-IO] Paquete emitido correctamente. ✅");
             } catch (err) {
                 console.error("🔴 [GOLF-IO] Error enviando datos:", err);
             }
         };
 
-        socket.on('golf_requestData', () => {
-            console.log(`🔵 [GOLF-IO] Cliente ${socket.id} ha pedido refrescar datos.`);
-            sendData();
-        });
+        socket.on('golf_requestData', sendData);
 
         // Añadir Datos Básicos
         socket.on('golf_addBasic', (data) => {
-            console.log(`\n🔵 [GOLF-IO] RECIBIDO EVENTO 'golf_addBasic'. Datos:`, data);
             try {
                 if (data.type === 'player') dbInstance.prepare('INSERT OR IGNORE INTO golf_players (name) VALUES (?)').run(data.value);
-                if (data.type === 'course') dbInstance.prepare('INSERT OR IGNORE INTO golf_courses (name) VALUES (?)').run(data.value);
-                if (data.type === 'track') dbInstance.prepare('INSERT OR IGNORE INTO golf_tracks (name) VALUES (?)').run(data.value);
-                if (data.type === 'feedback') {
-                    dbInstance.prepare('INSERT INTO golf_feedback (user, date, content) VALUES (?, ?, ?)').run(data.user, new Date().toISOString(), data.value);
-                }
-                console.log(`🔵 [GOLF-IO] Guardado en BD completado. Refrescando clientes...`);
+                else if (data.type === 'course') dbInstance.prepare('INSERT OR IGNORE INTO golf_courses (name) VALUES (?)').run(data.value);
+                else if (data.type === 'track') dbInstance.prepare('INSERT OR IGNORE INTO golf_tracks (name) VALUES (?)').run(data.value);
+                else if (data.type === 'feedback') dbInstance.prepare('INSERT INTO golf_feedback (user, date, content) VALUES (?, ?, ?)').run(data.user || 'Anon', new Date().toISOString(), data.value);
                 sendData();
             } catch (err) {
-                console.error(`🔴 [GOLF-IO] Error BBDD en golf_addBasic:`, err);
-                socket.emit('golf_error', `Error al añadir ${data.type}: ${err.message}`);
+                console.error(`🔴 [GOLF-IO] Error en golf_addBasic:`, err);
             }
         });
 
         // Eliminar Datos Básicos
         socket.on('golf_delBasic', (data) => {
-            console.log(`\n🔵 [GOLF-IO] RECIBIDO EVENTO 'golf_delBasic'. Datos:`, data);
             try {
                 if (data.type === 'player') dbInstance.prepare('DELETE FROM golf_players WHERE name = ?').run(data.value);
-                if (data.type === 'course') dbInstance.prepare('DELETE FROM golf_courses WHERE name = ?').run(data.value);
-                if (data.type === 'track') dbInstance.prepare('DELETE FROM golf_tracks WHERE name = ?').run(data.value);
-                if (data.type === 'feedback') dbInstance.prepare('DELETE FROM golf_feedback WHERE id = ?').run(parseInt(data.value, 10));
-                console.log(`🔵 [GOLF-IO] Borrado completado. Refrescando clientes...`);
+                else if (data.type === 'course') dbInstance.prepare('DELETE FROM golf_courses WHERE name = ?').run(data.value);
+                else if (data.type === 'track') dbInstance.prepare('DELETE FROM golf_tracks WHERE name = ?').run(data.value);
+                else if (data.type === 'feedback') dbInstance.prepare('DELETE FROM golf_feedback WHERE id = ?').run(parseInt(data.value, 10));
                 sendData();
             } catch(err) {
-                console.error(`🔴 [GOLF-IO] Error al borrar ${data.type}:`, err);
+                console.error(`🔴 [GOLF-IO] Error en golf_delBasic:`, err);
             }
         });
 
-        // Añadir Registro
-        socket.on('golf_addRecord', (r) => {
-            console.log(`\n🔵 [GOLF-IO] RECIBIDO EVENTO 'golf_addRecord'. Jugador: ${r.player}, Pista: ${r.track}, Golpes: ${r.strokes}`);
+        // ==========================================
+        // AÑADIR REGISTRO (CONSTRUCTOR DINÁMICO)
+        // ==========================================
+        socket.on('golf_addRecord', (payload) => {
+            console.log(`\n🔵 [GOLF-IO] Petición para guardar nuevo registro:`, payload);
             try {
-                dbInstance.prepare('INSERT OR IGNORE INTO golf_players (name) VALUES (?)').run(r.player);
-                dbInstance.prepare(`INSERT INTO golf_records (player, track, strokes, club, course, par, weather, date, addedBy, photo) 
-                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
-                    r.player, r.track, r.strokes, r.club, r.course || '', r.par || null, r.weather || '', new Date().toISOString(), r.addedBy, r.photo || null
-                );
-                console.log(`🔵 [GOLF-IO] Registro insertado en BD correctamente. Refrescando...`);
+                // Guardamos al jugador en la lista general si es nuevo
+                if (payload.player) dbInstance.prepare('INSERT OR IGNORE INTO golf_players (name) VALUES (?)').run(payload.player);
+
+                // 1. Limpiamos los datos nulos/vacíos y auto-creamos columnas necesarias
+                const cleanPayload = {};
+                for (let key in payload) {
+                    if (payload[key] !== undefined && payload[key] !== null && payload[key] !== '') {
+                        cleanPayload[key] = payload[key];
+                        // Detectamos si es número o texto
+                        const type = (typeof payload[key] === 'number') ? 'INTEGER' : 'TEXT';
+                        ensureColumn('golf_records', key, type); // Magia: crea la columna si no existe
+                    }
+                }
+                
+                // 2. Añadimos la fecha exacta de servidor
+                cleanPayload.date = new Date().toISOString();
+                ensureColumn('golf_records', 'date', 'TEXT');
+
+                // 3. Construimos la Query SQL de forma dinámica basada en los datos recibidos
+                const keys = Object.keys(cleanPayload);
+                const placeholders = keys.map(() => '?').join(', ');
+                const values = Object.values(cleanPayload);
+
+                const query = `INSERT INTO golf_records (${keys.join(', ')}) VALUES (${placeholders})`;
+                console.log(`🔵 [GOLF-IO] Ejecutando SQL: ${query}`);
+                
+                // 4. Ejecutar
+                const result = dbInstance.prepare(query).run(...values);
+                console.log(`✅ [GOLF-IO] ÉXITO. Registro creado con el ID interno: ${result.lastInsertRowid}`);
+                
                 sendData();
             } catch (err) {
-                console.error(`🔴 [GOLF-IO] Error guardando registro:`, err);
-                socket.emit('golf_error', 'Fallo servidor: ' + err.message);
+                console.error(`🔴 [GOLF-IO] Error crítico guardando registro:`, err);
+                socket.emit('golf_error', 'Fallo al guardar: ' + err.message);
             }
         });
 
         // Eliminar Registro
         socket.on('golf_delRecord', (data) => {
-            console.log(`\n🔵 [GOLF-IO] RECIBIDO EVENTO 'golf_delRecord'. Datos:`, data);
             try {
                 const numericId = parseInt(data.id, 10);
                 const safeUser = (data.reqUser || '').trim().toLowerCase();
                 const isAdmin = ['xarlie', 'administrador g'].includes(safeUser);
                 
+                // Nos aseguramos de que addedBy existe antes de consultar
+                ensureColumn('golf_records', 'addedBy', 'TEXT');
+                
                 const record = dbInstance.prepare('SELECT addedBy FROM golf_records WHERE id = ?').get(numericId);
                 
                 if (record) {
                     const recordOwner = (record.addedBy || '').trim().toLowerCase();
-                    console.log(`🔵 [GOLF-IO] Comparando permisos. Solicitante: "${safeUser}", Dueño: "${recordOwner}", Admin: ${isAdmin}`);
-                    
                     if (isAdmin || recordOwner === safeUser) {
-                        const result = dbInstance.prepare('DELETE FROM golf_records WHERE id = ?').run(numericId);
-                        console.log(`🔵 [GOLF-IO] Borrado ejecutado. Filas afectadas:`, result.changes);
+                        dbInstance.prepare('DELETE FROM golf_records WHERE id = ?').run(numericId);
+                        console.log(`✅ [GOLF-IO] Registro ${numericId} eliminado por ${safeUser}`);
                         sendData();
                     } else {
-                        console.log(`🔴 [GOLF-IO] Permiso DENEGADO.`);
-                        socket.emit('golf_error', 'No tienes permisos para borrar esto.');
+                        socket.emit('golf_error', 'No tienes permisos para borrar este registro.');
                     }
-                } else {
-                    console.log(`🔴 [GOLF-IO] Registro ID ${numericId} no encontrado en BD.`);
                 }
             } catch (err) {
-                console.error(`🔴 [GOLF-IO] Error en borrado de registro:`, err);
+                console.error(`🔴 [GOLF-IO] Error en borrado:`, err);
             }
         });
     }

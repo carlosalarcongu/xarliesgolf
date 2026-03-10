@@ -1,10 +1,4 @@
-console.log("🟢 [CLIENTE] Archivo main.js cargado.");
-
 const socket = io();
-
-socket.on('connect', () => {
-    console.log(`🟢 [CLIENTE] Socket conectado al servidor! ID: ${socket.id}`);
-});
 
 const app = {
     myPlayerName: null,
@@ -15,37 +9,32 @@ const app = {
     currentPhotoBase64: null, 
 
     init: () => {
-        console.log("🟢 [CLIENTE] Ejecutando app.init()...");
         const saved = localStorage.getItem('golf_user');
         if (saved) {
-            console.log(`🟢 [CLIENTE] Usuario previo encontrado en localStorage: ${saved}`);
             app.myPlayerName = saved;
             app.isAuthenticated = true; 
             socket.emit('golf_requestData');
             app.showScreen('hubScreen');
         } else {
-            console.log("🟢 [CLIENTE] No hay usuario guardado. Mostrando Login.");
             app.showScreen('loginScreen');
             document.getElementById('inp-username').focus();
         }
 
         socket.on('golf_data', (d) => {
-            console.log("🟢 [CLIENTE] RECIBIDO 'golf_data' desde el servidor.", d);
             app.data = d;
             if (app.currentListType) app.renderList(app.currentListType);
             app.populateSelects();
         });
 
         socket.on('golf_error', (msg) => {
-            console.log("🔴 [CLIENTE] RECIBIDO ERROR DEL SERVIDOR:", msg);
             alert("⚠️ Error del sistema: " + msg);
         });
 
-        document.getElementById('rec-photo').addEventListener('change', app.handlePhotoUpload);
+        const photoInput = document.getElementById('rec-photo');
+        if(photoInput) photoInput.addEventListener('change', app.handlePhotoUpload);
     },
 
     showScreen: (id) => {
-        console.log(`🟢 [CLIENTE] Cambiando a pantalla: ${id}`);
         document.querySelectorAll('.screen').forEach(el => el.classList.add('hidden'));
         document.getElementById(id).classList.remove('hidden');
 
@@ -62,11 +51,9 @@ const app = {
 
     login: () => {
         const name = document.getElementById('inp-username').value.trim();
-        console.log(`🟢 [CLIENTE] Intento de login con nombre: "${name}"`);
         if (!name) return alert("Introduce tu nombre");
 
         socket.emit('checkAuthRequirement', name, (res) => {
-            console.log(`🟢 [CLIENTE] Respuesta checkAuthRequirement:`, res);
             const finalize = () => {
                 app.myPlayerName = name;
                 localStorage.setItem('golf_user', name);
@@ -84,7 +71,6 @@ const app = {
     },
 
     logout: () => {
-        console.log("🟢 [CLIENTE] Cerrando sesión...");
         localStorage.removeItem('golf_user');
         app.myPlayerName = null;
         app.isAuthenticated = false;
@@ -132,7 +118,6 @@ const app = {
     },
 
     showList: (type) => {
-        console.log(`🟢 [CLIENTE] Abriendo lista de tipo: ${type}`);
         app.currentListType = type;
         app.showScreen('listScreen');
         
@@ -156,7 +141,6 @@ const app = {
 
     addBasic: () => {
         const val = document.getElementById('inp-basicAdd').value.trim();
-        console.log(`🟢 [CLIENTE] Botón Añadir pulsado. Contenido: "${val}"`);
         if(!val) return;
         
         let targetType = 'player';
@@ -164,23 +148,18 @@ const app = {
         if(app.currentListType === 'tracks') targetType = 'track';
         if(app.currentListType === 'feedback') targetType = 'feedback';
 
-        console.log(`🟡 [CLIENTE] EMITIENDO 'golf_addBasic'. Type: ${targetType}, Value: ${val}`);
         socket.emit('golf_addBasic', { type: targetType, value: val, user: app.myPlayerName });
         document.getElementById('inp-basicAdd').value = "";
     },
 
     delBasic: (type, val) => {
-        console.log(`🟢 [CLIENTE] Botón Borrar básico pulsado. Tipo: ${type}, Valor: ${val}`);
         if(confirm(`¿Borrar este elemento?`)) {
-            console.log(`🟡 [CLIENTE] EMITIENDO 'golf_delBasic'`);
             socket.emit('golf_delBasic', { type, value: val });
         }
     },
 
     delRecord: (id) => {
-        console.log(`🟢 [CLIENTE] Botón Borrar registro pulsado. ID: ${id}`);
         if(confirm("¿Eliminar este registro definitivamente?")) {
-            console.log(`🟡 [CLIENTE] EMITIENDO 'golf_delRecord' para ID ${id} con usuario ${app.myPlayerName}`);
             socket.emit('golf_delRecord', { id, reqUser: app.myPlayerName });
         }
     },
@@ -195,7 +174,7 @@ const app = {
             if(items.length === 0) c.innerHTML = "<p style='color:white; text-align:center;'>Vacío</p>";
             items.forEach(val => {
                 const typeMap = { players: 'player', courses: 'course', tracks: 'track' };
-                let delBtn = isAdmin ? `<button class="btn-del" onclick="app.delBasic('${typeMap[type]}', '${val}')">🗑️</button>` : '';
+                let delBtn = isAdmin ? `<button class="btn-del" onclick="app.delBasic('${typeMap[type]}', '${val.replace(/'/g, "\\'")}')">🗑️</button>` : '';
                 c.innerHTML += `<div class="list-item"><strong>${val}</strong> ${delBtn}</div>`;
             });
         } 
@@ -243,8 +222,8 @@ const app = {
                             <div style="display:flex; gap:5px;">${photoBtn} ${delBtn}</div>
                         </div>
                         <div style="color:#555; font-size:0.9em; line-height:1.3; width:100%;">
-                            <b>👤 ${r.player}</b> en <b>⛳ ${r.track}</b><br>
-                            🏌️ Palo: <span style="color:var(--green-dark); font-weight:bold;">${r.club}</span> <br>
+                            <b>👤 ${r.player || 'Desconocido'}</b> en <b>⛳ ${r.track || '?'}</b><br>
+                            🏌️ Palo: <span style="color:var(--green-dark); font-weight:bold;">${r.club || '?'}</span> <br>
                             <span style="font-size:0.8em; color:#888;">🗓️ ${dateStr} ${r.course ? '| 🗺️ '+r.course : ''} ${r.weather ? '| '+r.weather : ''}</span>
                         </div>
                     </div>`;
@@ -270,6 +249,7 @@ const app = {
         else if (type === 'streaks') {
             const stats = {};
             app.data.records.forEach(r => {
+                if (!r.player) return;
                 if (!stats[r.player]) stats[r.player] = { holes: 0, under: 0, par: 0, over: 0 };
                 stats[r.player].holes++;
                 if (r.par) {
@@ -304,7 +284,6 @@ const app = {
     },
 
     handlePhotoUpload: (event) => {
-        console.log("🟢 [CLIENTE] Archivo seleccionado.");
         const file = event.target.files[0];
         if(!file) {
             app.currentPhotoBase64 = null;
@@ -324,7 +303,6 @@ const app = {
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                 app.currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.6); 
-                console.log("🟢 [CLIENTE] Foto procesada y lista en Base64.");
             }
             img.src = e.target.result;
         }
@@ -340,7 +318,6 @@ const app = {
     },
 
     showAddRecordModal: () => {
-        console.log("🟢 [CLIENTE] Abriendo modal de registro.");
         app.populateSelects();
         document.getElementById('rec-photo').value = ""; 
         app.currentPhotoBase64 = null;
@@ -372,31 +349,46 @@ const app = {
         }
     },
 
+    // LA VERSIÓN FINAL Y LIMPIA DEL GUARDADO
     submitRecord: () => {
-        console.log("🟢 [CLIENTE] Botón Guardar Registro pulsado.");
         const player = document.getElementById('rec-player').value;
         const track = document.getElementById('rec-track').value;
         const strokes = document.getElementById('rec-strokes').value;
         const club = document.getElementById('rec-club').value.trim();
 
         if (!player || !track || !strokes || !club) {
-            console.log("🔴 [CLIENTE] Faltan datos obligatorios.");
-            return alert("Jugador, Pista, Golpes y Palo son obligatorios.");
+            let errores = [];
+            if (!player) errores.push("Jugador");
+            if (!track)  errores.push("Pista (Si no hay opciones, ve a Pistas en el Menú y crea una)");
+            if (!strokes) errores.push("Golpes");
+            if (!club) errores.push("Palo");
+            return alert("⚠️ FALTAN DATOS:\n\n- " + errores.join("\n- "));
         }
 
+        // Construir paquete filtrando vacíos para que la BBDD decida qué columnas crear
         const payload = {
-            player, track, strokes: parseInt(strokes), club,
-            course: document.getElementById('rec-course').value,
-            par: document.getElementById('rec-par').value ? parseInt(document.getElementById('rec-par').value) : null,
-            weather: document.getElementById('rec-weather').value,
-            addedBy: app.myPlayerName,
-            photo: app.currentPhotoBase64 
+            player: player,
+            track: track,
+            strokes: parseInt(strokes, 10),
+            club: club,
+            addedBy: app.myPlayerName
         };
 
-        console.log("🟡 [CLIENTE] EMITIENDO 'golf_addRecord'. Payload:", payload);
+        const course = document.getElementById('rec-course').value;
+        if (course) payload.course = course;
+
+        const par = document.getElementById('rec-par').value;
+        if (par) payload.par = parseInt(par, 10);
+
+        const weather = document.getElementById('rec-weather').value;
+        if (weather) payload.weather = weather;
+
+        if (app.currentPhotoBase64) payload.photo = app.currentPhotoBase64;
+
         socket.emit('golf_addRecord', payload);
         document.getElementById('recordModal').classList.add('hidden');
         
+        // Limpiamos
         document.getElementById('rec-strokes').value = "4";
         document.getElementById('rec-club').value = "";
         document.getElementById('rec-photo').value = "";
